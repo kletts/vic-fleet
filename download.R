@@ -2,8 +2,6 @@
 library(ckanr)
 library(tidyverse)
 library(arrow)
-library(here)
-library(glue)
 
 eoq <- function(x, n=0) {
     lubridate::ceiling_date(x, unit = "quarter") + base::months(n*3) - lubridate::days(1)
@@ -50,7 +48,7 @@ res <- resource_show(id = resid)
 
 asat <- as.Date(subset(ds$results, historical=="FALSE")$period_end)
 data <- ckan_fetch(res$url, format=res$format) 
-poa2sa3 <- read_rds(here("data", "poa2sa3.rds"))
+poa2sa3 <- read_rds("data/poa2sa3.rds")
 
 data <- data |> 
     mutate(POSTCODE = sprintf("%04.0f", POSTCODE)) |> 
@@ -65,7 +63,7 @@ data <- data |>
            Luxury = fct_luxury(Make)) |> 
     select(AsatDt, Make, Type, Fuel, AgeYears, Luxury, Sa3Code=SA3_CODE_2021, Total) 
 
-arrow::write_parquet(data, 
-        here("data", glue("VicRoadsFleetByPostcode_{make_yq(asat)}.parquet")))
+filename <- paste("data/VicRoadsFleetByPostcode_", make_yq(asat), ".parquet", sep="")
+arrow::write_parquet(data, filename)
 
 
