@@ -33,7 +33,8 @@ fct_fuel <- function(x) {
 fct_luxury <- function(x) { 
     luxury <- c("MERC B", "B M W", "AUDI", "LEXUS", "L ROV", "M G", "PORSCH",
                 "TESLA", "JAGUAR", "ALFA R", "SAAB", "FERRAR", "BENT", "CUPRA",
-                "ASTON", "ROVER", "ROLLS", "AUSTIN", "LOTUS", "LAMBR")
+                "ASTON", "ROVER", "ROLLS", "AUSTIN", "LOTUS", "LAMBR", 
+                "POLEST", "VOLVO", "SAAB")
     factor(x %in% luxury, levels=c(FALSE, TRUE), labels=c("Standard", "Luxury"))   
     }
 
@@ -43,21 +44,22 @@ ckanr_setup(url = "https://discover.data.vic.gov.au/",
 
 ds <- resource_search(q="name:Whole Fleet Vehicle Registration Snapshot by Postcode", 
                       as = 'table')
-resid <- subset(ds$results, historical=="FALSE")$resource_id
-res <- resource_show(id = resid) 
+resid <- subset(ds$results, historical=="FALSE")$id 
 
-asat <- as.Date(subset(ds$results, historical=="FALSE")$period_end)
+res <- resource_show(id = resid) 
+asat <- eoq(as.Date(read_yq(res$name)))
+
 data <- ckan_fetch(res$url, format=res$format) 
-poa2sa3 <- read_rds("data/poa2sa3.rds")
+poa2sa3 <- read_rds("refdata/poa2sa3.rds")
 
 data <- data |> 
     mutate(POSTCODE = sprintf("%04.0f", POSTCODE)) |> 
     inner_join(poa2sa3, by=c("POSTCODE"="POA_CODE21")) |> 
     summarise(Total = sum(TOTAL1), 
               .by=c("CD_MAKE_VEH1", "CD_CLASS_VEH", "NB_YEAR_MFC_VEH", "CD_CL_FUEL_ENG", "SA3_CODE_2021")) |> 
-    mutate(AsatDt = eoq(asat), 
+    mutate(AsatDt = asat, 
            Fuel=fct_fuel(CD_CL_FUEL_ENG), 
-           Make=CD_MAKE_VEH1, 
+           Make=stringr::str_squish(CD_MAKE_VEH1), 
            AgeYears = year(AsatDt) - NB_YEAR_MFC_VEH,
            Type=ifelse(CD_CLASS_VEH==2, "Car", "Bike"), 
            Luxury = fct_luxury(Make)) |> 

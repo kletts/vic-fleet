@@ -14,10 +14,13 @@ jobs:
           any::tidyverse 
           any::ckanr
           any::arrow
+          any::dbplyr
+          any::duckdb
 
     - run: Rscript download.R
       env:
-        DATAVIC_APIKEY: ${{ secrets.DATAVIC_APIKEY }}
+        DATAVIC_APIKEY: ${{ secrets.DATAVIC_APIKEY }} 
+    - run: Rscript trends.R
     - name: Commit and push changes
       uses: devops-infra/action-commit-push@master
       with:
